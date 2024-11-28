@@ -1,0 +1,43 @@
+name: Update OpenWrt-23.05(dev)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: 'v23.05-dev'
+          fetch-depth: 0
+          token: ${{ secrets.OPENWRT_WORKFLOW_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Merge upstream changes
+        run: |
+          reset_commit=$(git rev-list --max-parents=0 HEAD)
+          git reset --hard "$reset_commit"
+          git remote add upstream https://github.com/openwrt/openwrt.git
+          git fetch upstream
+          git checkout -B v23.05-dev upstream/openwrt-23.05 || exit 1
+          
+      - name: Bump kernel version
+        run: |
+          export GITHUB_TOKEN=${{ secrets.OPENWRT_WORKFLOW_TOKEN }}
+          export github="$GITHUB_TOKEN@github.com"
+          export mirror=raw.githubusercontent.com/pmkol/openwrt-target/main
+          curl -sO https://$mirror/openwrt-23.05/update-openwrt-23.05.sh
+          curl -s https://$mirror/kernel-6.11.6 > include/kernel-6.11
+          bash update-openwrt-23.05.sh
+          rm -rf .github update-openwrt-23.05.sh
+          git add .
+          git commit -m "kernel: bump 5.15 to 6.11.6"
+
+      - name: Push changes
+        run: git push origin refs/heads/v23.05-dev:refs/heads/v23.05-dev --force
