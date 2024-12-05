@@ -1,4 +1,4 @@
-name: Update OpenWrt-23.05(dev)
+name: Update OpenWrt-23.05(stable)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'v23.05-dev'
+          ref: 'v23.05.5'
           fetch-depth: 0
           token: ${{ secrets.OPENWRT_WORKFLOW_TOKEN }}
 
@@ -24,8 +24,8 @@ jobs:
           reset_commit=$(git rev-list --max-parents=0 HEAD)
           git reset --hard "$reset_commit"
           git remote add upstream https://github.com/openwrt/openwrt.git
-          git fetch upstream
-          git checkout -B v23.05-dev upstream/openwrt-23.05 || exit 1
+          git fetch upstream --tags
+          git checkout -B v23.05.5 tags/v23.05.5 || exit 1
           
       - name: Bump kernel version
         run: |
@@ -40,4 +40,4 @@ jobs:
           git commit -m "kernel: bump 5.15 to 6.11.11"
 
       - name: Push changes
-        run: git push origin refs/heads/v23.05-dev:refs/heads/v23.05-dev --force
+        run: git push origin refs/heads/v23.05.5:refs/heads/v23.05.5 --force
