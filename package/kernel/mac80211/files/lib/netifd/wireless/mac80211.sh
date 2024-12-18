@@ -19,6 +19,10 @@ wdev_tool() {
 	ucode /usr/share/hostap/wdev.uc "$@"
 }
 
+ubus_call() {
+	flock /var/run/hostapd.lock ubus call "$@"
+}
+
 drv_mac80211_init_device_config() {
 	hostapd_common_add_device_config
 
@@ -203,7 +207,7 @@ mac80211_hostapd_setup_base() {
 			dsss_cck_40:1
 
 		ht_cap_mask=0
-		for cap in $(iw phy "$phy" info | grep -E '^\s*Capabilities:' | cut -d: -f2); do
+		for cap in $(iw phy "$phy" info | grep 'Capabilities:' | cut -d: -f2); do
 			ht_cap_mask="$(($ht_cap_mask | $cap))"
 		done
 
@@ -269,7 +273,6 @@ mac80211_hostapd_setup_base() {
 				case "$channel" in
 					36|40|44|48|52|56|60|64) idx=50;;
 					100|104|108|112|116|120|124|128) idx=114;;
-					149|153|157|161|165|169|173|177) idx=163;;
 				esac
 			fi
 			enable_ac=1
@@ -429,9 +432,9 @@ mac80211_hostapd_setup_base() {
 			he_bss_color:128 \
 			he_bss_color_enabled:1
 
-		he_phy_cap=$(iw phy "$phy" info | sed -n '/HE Iftypes: .*AP/,$p' | awk -F "[()]" '/HE PHY Capabilities/ { print $2 }' | head -1)
+		he_phy_cap=$(iw phy "$phy" info | sed -n '/HE Iftypes: AP/,$p' | awk -F "[()]" '/HE PHY Capabilities/ { print $2 }' | head -1)
 		he_phy_cap=${he_phy_cap:2}
-		he_mac_cap=$(iw phy "$phy" info | sed -n '/HE Iftypes: .*AP/,$p' | awk -F "[()]" '/HE MAC Capabilities/ { print $2 }' | head -1)
+		he_mac_cap=$(iw phy "$phy" info | sed -n '/HE Iftypes: AP/,$p' | awk -F "[()]" '/HE MAC Capabilities/ { print $2 }' | head -1)
 		he_mac_cap=${he_mac_cap:2}
 
 		append base_cfg "ieee80211ax=1" "$N"
@@ -556,7 +559,7 @@ get_board_phy_name() (
 		local ref_path="$3"
 
 		json_select "$key"
-		json_get_values path
+		json_get_vars path
 		json_select ..
 
 		[ "${ref_path%+*}" = "$path" ] && fallback_phy=$key
@@ -588,7 +591,7 @@ rename_board_phy_by_name() (
 	json_load_file /etc/board.json
 	json_select wlan
 	json_select "${phy%.*}" || return 0
-	json_get_values path
+	json_get_vars path
 
 	prev_phy="$(iwinfo nl80211 phyname "path=$path${suffix:++$suffix}")"
 	[ -n "$prev_phy" ] || return 0
@@ -904,7 +907,7 @@ wpa_supplicant_set_config() {
 		ubus wait_for wpa_supplicant
 	}
 
-	local supplicant_res="$(ubus call wpa_supplicant config_set "$data")"
+	local supplicant_res="$(ubus_call wpa_supplicant config_set "$data")"
 	ret="$?"
 	[ "$ret" != 0 -o -z "$supplicant_res" ] && wireless_setup_vif_failed WPA_SUPPLICANT_FAILED
 
@@ -914,12 +917,12 @@ wpa_supplicant_set_config() {
 
 hostapd_set_config() {
 	[ -n "$hostapd_ctrl" ] || {
-		ubus call hostapd config_set '{ "phy": "'"$phy"'", "config": "", "prev_config": "'"${hostapd_conf_file}.prev"'" }' > /dev/null
+		ubus_call hostapd config_set '{ "phy": "'"$phy"'", "config": "", "prev_config": "'"${hostapd_conf_file}.prev"'" }' > /dev/null
 		return 0;
 	}
 
 	ubus wait_for hostapd
-	local hostapd_res="$(ubus call hostapd config_set "{ \"phy\": \"$phy\", \"config\":\"${hostapd_conf_file}\", \"prev_config\": \"${hostapd_conf_file}.prev\"}")"
+	local hostapd_res="$(ubus_call hostapd config_set "{ \"phy\": \"$phy\", \"config\":\"${hostapd_conf_file}\", \"prev_config\": \"${hostapd_conf_file}.prev\"}")"
 	ret="$?"
 	[ "$ret" != 0 -o -z "$hostapd_res" ] && {
 		wireless_setup_failed HOSTAPD_START_FAILED
@@ -934,7 +937,7 @@ wpa_supplicant_start() {
 
 	[ -n "$wpa_supp_init" ] || return 0
 
-	ubus call wpa_supplicant config_set '{ "phy": "'"$phy"'" }' > /dev/null
+	ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'" }' > /dev/null
 }
 
 mac80211_setup_supplicant() {
@@ -1035,15 +1038,15 @@ mac80211_set_noscan() {
 }
 
 drv_mac80211_cleanup() {
-	hostapd_common_cleanup
+	:
 }
 
 mac80211_reset_config() {
 	local phy="$1"
 
 	hostapd_conf_file="/var/run/hostapd-$phy.conf"
-	ubus call hostapd config_set '{ "phy": "'"$phy"'", "config": "", "prev_config": "'"$hostapd_conf_file"'" }' > /dev/null
-	ubus call wpa_supplicant config_set '{ "phy": "'"$phy"'", "config": [] }' > /dev/null
+	ubus_call hostapd config_set '{ "phy": "'"$phy"'", "config": "", "prev_config": "'"$hostapd_conf_file"'" }' > /dev/null
+	ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'", "config": [] }' > /dev/null
 	wdev_tool "$phy" set_config '{}'
 }
 

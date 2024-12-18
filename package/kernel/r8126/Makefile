@@ -1,47 +1,39 @@
+#
+# Download realtek r8126 linux driver from official site:
+# [https://www.realtek.com/Download/List?cate_id=584]
+#
+
 include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=r8126
 PKG_VERSION:=10.014.01
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=https://github.com/openwrt/rtl8126/releases/download/$(PKG_VERSION)
-PKG_HASH:=dbb10a7abd0972e4abd1b89ea4eb22fc55d6c1dc2f711b5acf4a3bc376275e21
+PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
-PKG_BUILD_PARALLEL:=1
-PKG_LICENSE:=GPLv2
-PKG_MAINTAINER:=Alvaro Fernandez Rojas <noltari@gmail.com>
-
-include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/r8126
-  SUBMENU:=Network Devices
   TITLE:=Realtek RTL8126 PCI 5 Gigabit Ethernet driver
+  SUBMENU:=Network Devices
   DEPENDS:=@PCI_SUPPORT +kmod-libphy
-  FILES:=$(PKG_BUILD_DIR)/src/r8126.ko
-  AUTOLOAD:=$(call AutoProbe,r8126)
+  FILES:= $(PKG_BUILD_DIR)/r8126.ko
   PROVIDES:=kmod-r8169
-  VARIANT:=regular
+  AUTOLOAD:=$(call AutoProbe,r8126)
 endef
 
-define KernelPackage/r8126-rss
-$(call KernelPackage/r8126)
-  CONFLICTS:=kmod-r8126
-  TITLE+= (RSS)
-  VARIANT:=rss
+define Package/r8126/description
+  This package contains a driver for Realtek r8126 chipsets.
 endef
 
-ifeq ($(BUILD_VARIANT),rss)
-  PKG_MAKE_FLAGS += ENABLE_RSS_SUPPORT=y
-endif
+PKG_MAKE_FLAGS += ENABLE_RSS_SUPPORT=y
 
 define Build/Compile
 	+$(KERNEL_MAKE) $(PKG_JOBS) \
 		$(PKG_MAKE_FLAGS) \
-		M="$(PKG_BUILD_DIR)/src" \
+		M="$(PKG_BUILD_DIR)" \
 		modules
 endef
 
 $(eval $(call KernelPackage,r8126))
-$(eval $(call KernelPackage,r8126-rss))
