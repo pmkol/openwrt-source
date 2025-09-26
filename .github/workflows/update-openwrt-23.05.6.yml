@@ -10,7 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'v23.05.5'
+          ref: 'v23.05.6'
           fetch-depth: 0
           token: ${{ secrets.OPENWRT_WORKFLOW_TOKEN }}
 
@@ -25,7 +25,7 @@ jobs:
           git reset --hard "$reset_commit"
           git remote add upstream https://github.com/openwrt/openwrt.git
           git fetch upstream --tags
-          git checkout -B v23.05.5 tags/v23.05.5 || exit 1
+          git checkout -B v23.05.6 tags/v23.05.6 || exit 1
           
       - name: Bump kernel version
         run: |
@@ -40,4 +40,4 @@ jobs:
           git commit -m "kernel: bump 5.15 to 6.11.11"
 
       - name: Push changes
-        run: git push origin refs/heads/v23.05.5:refs/heads/v23.05.5 --force
+        run: git push origin refs/heads/v23.05.6:refs/heads/v23.05.6 --force
