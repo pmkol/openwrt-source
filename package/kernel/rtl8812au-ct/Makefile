@@ -7,10 +7,10 @@ PKG_LICENSE:=GPLv2
 PKG_LICENSE_FILES:=
 
 PKG_SOURCE_URL:=https://github.com/greearb/rtl8812AU_8821AU_linux.git
-PKG_MIRROR_HASH:=31e658df3e4d4c18c396259c2e0bef2bfc44a4aa870931f031a31e948be98af4
+PKG_MIRROR_HASH:=748f5c58aa3f391222c0c43db35b9ff4c30c9c987ca052a5a3cdf36193e5821b
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2021-11-07
-PKG_SOURCE_VERSION:=39df55967b7de9f6c9600017b724303f95a8b9e2
+PKG_SOURCE_DATE:=2022-10-26
+PKG_SOURCE_VERSION:=9b2b203a217e1320602a0eb07c338a1bfca0f5a6
 
 PKG_MAINTAINER:=Ben Greear <greearb@candelatech.com>
 PKG_BUILD_PARALLEL:=1
@@ -41,7 +41,15 @@ NOSTDINC_FLAGS := \
 	-I$(STAGING_DIR)/usr/include/mac80211/uapi \
 	-include backport/backport.h \
 	-Wno-error=address \
-	-Wno-error=stringop-overread
+	-Wno-error=enum-conversion \
+	-Wno-error=missing-prototypes
+
+ifeq (,$(findstring clang,$(KERNEL_CC)))
+NOSTDINC_FLAGS += \
+	-Wno-error=stringop-overread \
+	-Wno-missing-prototypes \
+	-Wno-error=restrict
+endif
 
 NOSTDINC_FLAGS+=-DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT -DBUILD_OPENWRT
 
